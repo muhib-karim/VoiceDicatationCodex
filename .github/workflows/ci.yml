@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # WPF (net8.0-windows) builds and runs only on Windows.
+    runs-on: windows-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore VoiceDictationCodex.sln
+
+      - name: Build
+        run: dotnet build VoiceDictationCodex.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test VoiceDictationCodex.sln --configuration Release --no-build --verbosity normal

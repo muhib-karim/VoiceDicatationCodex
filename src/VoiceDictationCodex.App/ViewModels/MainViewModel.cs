@@ -95,7 +95,7 @@ public class MainViewModel : ViewModelBase
         _transcriptionService.TextUpdated += (_, text) =>
         {
             ActiveTranscription.Text = text;
-            ActiveTranscription.WordCount = text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            ActiveTranscription.WordCount = TranscriptionState.CountWords(text);
             RaisePropertyChanged(nameof(ActiveTranscription));
             ExportTextCommand.RaiseCanExecuteChanged();
         };
@@ -158,7 +158,17 @@ public class MainViewModel : ViewModelBase
             RecordingStatusText = $"Downloading {(int)(value * 100)}%";
         });
 
-        var updated = await _downloadService.DownloadAsync(SelectedModel, progress);
+        WhisperModelInfo updated;
+        try
+        {
+            updated = await _downloadService.DownloadAsync(SelectedModel, progress);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or UnauthorizedAccessException or TaskCanceledException)
+        {
+            RecordingStatusText = $"Download failed: {ex.Message}";
+            return;
+        }
+
         UpdateModel(updated);
         SelectedModel = updated;
         RecordingStatusText = "Model ready";
@@ -215,8 +225,21 @@ public class MainViewModel : ViewModelBase
             ActiveTranscription.ModelName = SelectedModel.Name;
             ActiveTranscription.Language = SelectedModel.LanguageSupport;
             RaisePropertyChanged(nameof(ActiveTranscription));
-            _audioCapture.Start();
-            await _transcriptionService.StartAsync(SelectedModel.LocalPath);
+            try
+            {
+                _audioCapture.Start();
+                await _transcriptionService.StartAsync(SelectedModel.LocalPath);
+            }
+            catch (Exception ex)
+            {
+                // Missing microphone or whisper runtime: reset instead of crashing the async void handler.
+                _audioCapture.Stop();
+                _transcriptionService.Stop();
+                _isRecording = false;
+                RecordingIndicatorBrush = Brushes.Gray;
+                RecordingStatusText = $"Could not start: {ex.Message}";
+                RecordingButtonText = "Start Recording";
+            }
         }
     }
 

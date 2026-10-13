@@ -30,7 +30,9 @@ public class TranscriptionService
         _runtime.Stop();
     }
 
-    private void HandleTranscriptionLine(object? sender, string line)
+    private void HandleTranscriptionLine(object? sender, string line) => ProcessLine(line);
+
+    internal void ProcessLine(string line)
     {
         try
         {

@@ -7,6 +7,10 @@ namespace VoiceDictationCodex.Services;
 
 public class WhisperRuntime
 {
+    /// <summary>Environment variable that overrides the whisper.cpp executable location.</summary>
+    public const string ExecutablePathVariable = "VOICEDICTATION_WHISPER_PATH";
+    public const string DefaultExecutable = "whisper.cpp.exe";
+
     private Process? _whisperProcess;
 
     public bool IsRunning => _whisperProcess is { HasExited: false };
@@ -22,8 +26,8 @@ public class WhisperRuntime
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "whisper.cpp.exe", // placeholder - supply bundled runtime
-            Arguments = $"--model \"{modelPath}\" --output-json";
+            FileName = ResolveExecutablePath(),
+            Arguments = BuildArguments(modelPath),
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -46,6 +50,14 @@ public class WhisperRuntime
             }
         }, cancellationToken);
     }
+
+    public static string ResolveExecutablePath()
+    {
+        var overridePath = Environment.GetEnvironmentVariable(ExecutablePathVariable);
+        return string.IsNullOrWhiteSpace(overridePath) ? DefaultExecutable : overridePath.Trim();
+    }
+
+    public static string BuildArguments(string modelPath) => $"--model \"{modelPath}\" --output-json";
 
     public void Stop()
     {

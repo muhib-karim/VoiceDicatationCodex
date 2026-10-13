@@ -12,6 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Resources\\Theme.xaml" />
+    <InternalsVisibleTo Include="VoiceDictationCodex.Tests" />
   </ItemGroup>
 </Project>

@@ -23,6 +23,8 @@ VoiceDictationCodex follows a lightweight MVVM architecture designed for Windows
 2. `WhisperRuntime` starts an external `whisper.cpp.exe` process with the chosen model.
 3. `TranscriptionService` listens to stdout, aggregates text, and notifies `MainViewModel` for UI updates.
 
+> Current status: steps 1 and 2 run side by side, but captured audio is not yet piped into the Whisper process. The executable defaults to `whisper.cpp.exe` and can be overridden with the `VOICEDICTATION_WHISPER_PATH` environment variable.
+
 ### 3. Export workflow
 1. `MainViewModel.ExportText` serializes the in-memory transcript to the user's documents folder.
 2. Future iterations can add Markdown/Subtitle exporters or integrate with project management tools.

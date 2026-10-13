@@ -7,4 +7,9 @@ public class TranscriptionState
     public int WordCount { get; set; }
     public string Language { get; set; } = "Auto";
     public string ModelName { get; set; } = "";
+
+    public static int CountWords(string? text)
+        => string.IsNullOrWhiteSpace(text)
+            ? 0
+            : text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
 }

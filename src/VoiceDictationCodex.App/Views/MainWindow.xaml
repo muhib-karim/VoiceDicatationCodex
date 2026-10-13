@@ -8,6 +8,7 @@
         Width="1280"
         Height="840"
         WindowStartupLocation="CenterScreen"
+        Background="{StaticResource SecondaryBrush}"
         mc:Ignorable="d">
     <Window.DataContext>
         <viewModels:MainViewModel />

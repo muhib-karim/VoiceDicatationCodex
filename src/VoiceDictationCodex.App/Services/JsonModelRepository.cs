@@ -13,9 +13,12 @@ public class JsonModelRepository : IModelRepository
     private readonly string _metadataPath;
 
     public JsonModelRepository()
+        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VoiceDictationCodex"))
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var appDirectory = Path.Combine(appData, "VoiceDictationCodex");
+    }
+
+    public JsonModelRepository(string appDirectory)
+    {
         Directory.CreateDirectory(appDirectory);
         _metadataPath = Path.Combine(appDirectory, "models.json");
     }
@@ -29,7 +32,12 @@ public class JsonModelRepository : IModelRepository
 
         await using var stream = File.OpenRead(_metadataPath);
         var models = await JsonSerializer.DeserializeAsync<List<WhisperModelInfo>>(stream, cancellationToken: cancellationToken);
-        return models ?? Array.Empty<WhisperModelInfo>();
+        if (models is null)
+        {
+            return Array.Empty<WhisperModelInfo>();
+        }
+
+        return models;
     }
 
     public async Task<WhisperModelInfo?> GetInstalledModelAsync(string id, CancellationToken cancellationToken = default)

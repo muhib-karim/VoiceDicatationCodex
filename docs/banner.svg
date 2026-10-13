@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
+  <title id="title">VoiceDictationCodex</title>
+  <desc id="desc">Offline voice dictation for Windows powered by local Whisper models</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0E1224"/>
+      <stop offset="0.55" stop-color="#151A2F"/>
+      <stop offset="1" stop-color="#1F253C"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4B5DFF"/>
+      <stop offset="1" stop-color="#64FFDA"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.88" cy="0.5" r="0.35">
+      <stop offset="0" stop-color="#4B5DFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#4B5DFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <rect width="1280" height="320" fill="url(#glow)"/>
+
+  <!-- Microphone -->
+  <g transform="translate(96 84)">
+    <rect x="0" y="0" width="64" height="104" rx="32" fill="none" stroke="url(#wave)" stroke-width="8"/>
+    <path d="M-20 70 a52 52 0 0 0 104 0" fill="none" stroke="url(#wave)" stroke-width="8" stroke-linecap="round"/>
+    <line x1="32" y1="122" x2="32" y2="148" stroke="#64FFDA" stroke-width="8" stroke-linecap="round"/>
+    <line x1="8" y1="150" x2="56" y2="150" stroke="#64FFDA" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <text x="232" y="150" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#FFFFFF">VoiceDictationCodex</text>
+  <text x="234" y="200" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="24" fill="#CCD3F5">Offline voice dictation for Windows with local Whisper models</text>
+  <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="600">
+    <rect x="234" y="226" width="124" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="296" y="249" text-anchor="middle" fill="#64FFDA">C# · .NET 8</text>
+    <rect x="370" y="226" width="72" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="406" y="249" text-anchor="middle" fill="#64FFDA">WPF</text>
+    <rect x="454" y="226" width="136" height="34" rx="17" fill="#FFFFFF" fill-opacity="0.12"/>
+    <text x="522" y="249" text-anchor="middle" fill="#64FFDA">whisper.cpp</text>
+  </g>
+
+  <!-- Waveform bars -->
+  <g fill="url(#wave)">
+    <rect x="1040" y="146" width="10" height="28" rx="5"/>
+    <rect x="1062" y="126" width="10" height="68" rx="5"/>
+    <rect x="1084" y="100" width="10" height="120" rx="5"/>
+    <rect x="1106" y="80" width="10" height="160" rx="5"/>
+    <rect x="1128" y="112" width="10" height="96" rx="5"/>
+    <rect x="1150" y="90" width="10" height="140" rx="5"/>
+    <rect x="1172" y="120" width="10" height="80" rx="5"/>
+    <rect x="1194" y="104" width="10" height="112" rx="5"/>
+    <rect x="1216" y="134" width="10" height="52" rx="5"/>
+    <rect x="1238" y="148" width="10" height="24" rx="5"/>
+  </g>
+</svg>
