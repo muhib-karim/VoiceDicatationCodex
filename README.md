@@ -120,6 +120,10 @@ docs/                      # Architecture notes and banner
 - **Session duration:** shown in the UI but not yet updated while recording.
 - Planned: waveform visualization, a settings view (hotkeys, formatting, punctuation), and MSIX/WinGet packaging with optional pre-bundled models.
 
+## Contributing
+
+Issues and pull requests are welcome. Please keep each pull request focused and say how you tested it.
+
 ## License
 
 [MIT](LICENSE) © 2026 Muhib Al Karim
