@@ -12,3 +12,20 @@ logs/
 publish/
 artifacts/
 *.cache
+
+# Whisper models and audio are never committed
+*.bin
+*.ggml
+*.gguf
+*.partial
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+
+# Test and coverage output
+TestResults/
+coverage*/
+*.trx
+*.cobertura.xml

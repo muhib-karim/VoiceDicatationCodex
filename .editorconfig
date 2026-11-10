@@ -1,0 +1,14 @@
+root = true
+
+[*]
+indent_style = space
+insert_final_newline = true
+
+[*.{cs,xaml}]
+indent_size = 4
+
+[*.{csproj,props,json,yml,yaml}]
+indent_size = 2
+
+[*.sln]
+indent_style = tab
