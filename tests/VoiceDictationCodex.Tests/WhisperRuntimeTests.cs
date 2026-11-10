@@ -5,12 +5,29 @@ namespace VoiceDictationCodex.Tests;
 
 public class WhisperRuntimeTests
 {
-    [Fact]
-    public void BuildArguments_QuotesModelPath()
+    [Theory]
+    [InlineData(@"C:\My Models\ggml-base.en.bin")]
+    [InlineData(@"C:\models with space\trailing\")]
+    [InlineData("C:\\odd \"quoted\" name.bin")]
+    public void BuildArgumentList_PassesTheModelPathAsOneUnmodifiedArgument(string modelPath)
     {
-        var args = WhisperRuntime.BuildArguments(@"C:\My Models\ggml-base.en.bin");
+        var args = WhisperRuntime.BuildArgumentList(modelPath);
 
-        Assert.Equal("--model \"C:\\My Models\\ggml-base.en.bin\" --output-json", args);
+        Assert.Equal(new[] { "--model", modelPath, "--output-json" }, args);
+    }
+
+    [Fact]
+    public void CreateStartInfo_RedirectsBothPipesAsUtf8AndUsesAnArgumentList()
+    {
+        var startInfo = WhisperRuntime.CreateStartInfo(@"C:\My Models\ggml-base.en.bin");
+
+        Assert.True(startInfo.RedirectStandardOutput);
+        Assert.True(startInfo.RedirectStandardError);
+        Assert.False(startInfo.UseShellExecute);
+        Assert.Equal(System.Text.Encoding.UTF8, startInfo.StandardOutputEncoding);
+        Assert.Equal(System.Text.Encoding.UTF8, startInfo.StandardErrorEncoding);
+        Assert.Equal(string.Empty, startInfo.Arguments);
+        Assert.Equal(new[] { "--model", @"C:\My Models\ggml-base.en.bin", "--output-json" }, startInfo.ArgumentList);
     }
 
     [Fact]
@@ -32,8 +49,18 @@ public class WhisperRuntimeTests
     }
 
     [Fact]
-    public void NewRuntime_IsNotRunning()
+    public void DefaultExecutable_IsTheWhisperCppCommandLineBinary()
     {
-        Assert.False(new WhisperRuntime().IsRunning);
+        Assert.Equal("whisper-cli.exe", WhisperRuntime.DefaultExecutable);
+    }
+
+    [Fact]
+    public void NewRuntime_IsNotRunning_AndStopIsANoOp()
+    {
+        using var runtime = new WhisperRuntime();
+
+        runtime.Stop();
+
+        Assert.False(runtime.IsRunning);
     }
 }
