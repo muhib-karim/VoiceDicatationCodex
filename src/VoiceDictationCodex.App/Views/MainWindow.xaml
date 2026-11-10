@@ -71,6 +71,8 @@
                     </ListView>
                     <Button Content="Download Selected"
                             Command="{Binding DownloadSelectedModelCommand}" />
+                    <Button Content="Cancel Download"
+                            Command="{Binding CancelDownloadCommand}" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -114,14 +116,22 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="Live transcription"
+                        <!-- A Grid row bounds the ScrollViewer's height; inside a StackPanel it would never scroll. -->
+                        <Grid Grid.Column="0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       Text="Live transcription"
                                        FontSize="16"
                                        FontWeight="SemiBold" />
-                            <ScrollViewer Margin="0,16,0,0">
+                            <ScrollViewer Grid.Row="1"
+                                          Margin="0,16,0,0"
+                                          VerticalScrollBarVisibility="Auto">
                                 <TextBlock Text="{Binding ActiveTranscription.Text}" TextWrapping="Wrap" />
                             </ScrollViewer>
-                        </StackPanel>
+                        </Grid>
 
                         <Border Grid.Column="1"
                                 Background="#11FFFFFF"

@@ -29,6 +29,16 @@ VoiceDictationCodex follows a lightweight MVVM architecture designed for Windows
 1. `MainViewModel.ExportText` serializes the in-memory transcript to the user's documents folder.
 2. Future iterations can add Markdown/Subtitle exporters or integrate with project management tools.
 
+### 4. Threading and lifetime
+- Whisper output and audio callbacks arrive on background threads. `MainViewModel` applies them through `IUiDispatcher`, so bound properties and commands only change on the UI thread.
+- `MainViewModel` watches the task returned by `StartAsync`. When the process ends on its own, the UI returns to idle and shows the exit code and the last stderr line.
+- `MainViewModel` is `IDisposable`; `MainWindow` disposes it on `Closed`, which stops the whisper process, releases the microphone and cancels a running download.
+- `AsyncRelayCommand` routes exceptions to an error callback instead of letting them escape an `async void`. `App` logs anything still unhandled.
+
+## Testing seams
+
+`IModelRepository`, `IModelDownloader`, `IWhisperRuntime`, `IAudioCapture`, `IDialogService` and `IUiDispatcher` are injected through an internal `MainViewModel` constructor. The public parameterless constructor used by XAML wires the real implementations.
+
 ## Extending the app
 
 - **Alternate runtimes:** swap `WhisperRuntime` with a managed Whisper.NET or ONNX runtime that runs directly in-process.

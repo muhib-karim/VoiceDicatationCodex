@@ -26,7 +26,7 @@ End-to-end live dictation is **not finished**. Captured audio is not yet passed 
 | Model catalog, download, SHA-256 verification, local registry | Works |
 | Starting, monitoring and stopping an external whisper.cpp process | Works |
 | Reading the process output into the transcript view | Works |
-| Microphone capture (16 kHz mono PCM) | Works, but the audio is not consumed yet |
+| Microphone capture (16 kHz mono PCM, capped at 30 minutes in memory) | Works, but the audio is not consumed yet |
 | Feeding captured audio to Whisper (live dictation) | Not implemented |
 | Import Audio | Placeholder dialog |
 | Session duration | Shown, not updated |
@@ -38,9 +38,12 @@ See [Roadmap and limitations](#roadmap-and-limitations).
 - **Built-in model catalog.** Three whisper.cpp GGML models: `ggml-base.en`, `ggml-small` and `ggml-medium`, each with its exact size and SHA-256.
 - **Verified model downloads.** A model streams from the public `ggerganov/whisper.cpp` files on Hugging Face (pinned to one revision) into a `.partial` file. It is moved into place only after its size and SHA-256 match. A failed, stalled or corrupted download leaves nothing behind.
 - **Local model registry.** Metadata for installed models is saved as JSON and merged with the catalog at startup. Saves are atomic, and an unreadable file is set aside as `models.json.corrupt` instead of breaking the model list.
-- **Microphone capture.** 16 kHz mono PCM via NAudio `WaveInEvent`.
+- **Cancellable downloads.** *Cancel Download* stops a download in progress, and a connection that stalls for 60 seconds is abandoned.
+- **Microphone capture.** 16 kHz mono PCM via NAudio `WaveInEvent`, held in memory with a 30-minute cap.
 - **Whisper runtime orchestration.** Launches an external whisper.cpp executable with the selected model, reads stdout and stderr as UTF-8, and reports the exit code and the last stderr lines when the process ends. JSON lines (`{"text": ...}`) and plain-text output are both accumulated into the transcript.
 - **Session dashboard.** Shows the transcript, word count, language and model, plus *New Session* and *Export Text* (writes a timestamped `.txt`).
+- **Failures stay on screen instead of crashing.** A missing microphone, a missing or exiting whisper executable, a failed download or a failed export updates the status text. Anything unexpected is logged to `%LOCALAPPDATA%\VoiceDictationCodex\logs\errors.log`.
+- **Clean shutdown.** Closing the window stops the whisper process, releases the microphone and cancels a running download.
 - **Dark, custom-styled WPF theme.**
 
 ## Quick start
@@ -61,7 +64,7 @@ dotnet run --project src/VoiceDictationCodex.App/VoiceDictationCodex.App.csproj
 
 ## Usage
 
-1. Pick a model under **Model Library** and click **Download Selected**. The status chip shows download progress, and the model is verified before it is marked installed.
+1. Pick a model under **Model Library** and click **Download Selected**. The status chip shows download progress, and the model is verified before it is marked installed. **Cancel Download** stops it.
 2. Once the model is installed, click **Start Recording**. This starts microphone capture and the whisper.cpp process. Click **Stop Recording** to end the session. Until the live pipeline exists, the transcript shows only what the whisper process itself prints.
 3. Use **New Session** to clear the transcript and **Export Text** to save it as a `.txt` file.
 
@@ -85,6 +88,7 @@ No secrets or API keys are used anywhere in the app.
 | Downloaded models | `%LOCALAPPDATA%\VoiceDictationCodex\Models` |
 | Model registry | `%APPDATA%\VoiceDictationCodex\models.json` |
 | Exported transcripts | `Documents\VoiceDictationCodex` |
+| Error log | `%LOCALAPPDATA%\VoiceDictationCodex\logs\errors.log` |
 
 Models are kept out of `Documents` so that a synced Documents folder does not upload files of up to 1.5 GB. Models downloaded by an earlier version stay where they are and keep working, because the registry stores their full path.
 
@@ -116,6 +120,7 @@ flowchart LR
     VM --> REPO["JsonModelRepository<br/>(IModelRepository)"]
     VM --> AUD["AudioCaptureService<br/>(NAudio, 16 kHz mono)"]
     VM --> TS["TranscriptionService"]
+    VM --> UI2["IUiDispatcher / IDialogService"]
 
     DL -- HTTPS, verified --> HF[("Hugging Face<br/>GGML models")]
     DL -- save metadata --> REPO
@@ -128,7 +133,7 @@ flowchart LR
 
 ## Testing and CI
 
-The xUnit project under `tests/` covers the model catalog, verified downloads (success, hash mismatch, truncation, mid-stream failure, cancellation, stall and HTTP error), the JSON registry (round trips, corrupt files, concurrent saves), transcript line parsing, word counting, and the whisper process lifecycle. Process tests launch a small stand-in child process, so they need neither a whisper binary nor a microphone. No test touches the network.
+The xUnit project under `tests/` covers the model catalog, verified downloads (success, hash mismatch, truncation, mid-stream failure, cancellation, stall and HTTP error), the JSON registry (round trips, corrupt files, concurrent saves), transcript line parsing, word counting, the whisper process lifecycle, audio capture (against a fake device), and `MainViewModel` (recording state, downloads, export, disposal, UI-thread marshalling). Process tests launch a small stand-in child process, so they need neither a whisper binary nor a microphone. No test touches the network.
 
 ```powershell
 dotnet test VoiceDictationCodex.sln --configuration Release
@@ -164,20 +169,16 @@ docs/                      # Architecture notes and banner
 - **Session duration:** shown in the UI but not yet updated while recording.
 - Planned: waveform visualization, a settings view (hotkeys, formatting, punctuation), and MSIX/WinGet packaging with optional pre-bundled models.
 
-<!-- known-issues:start -->
 ## Known issues
 
-These are understood and not yet fixed:
+Open after the latest round of fixes:
 
-- Transcript updates are raised from a background thread, which can stop a session at the first transcript line.
-- When the whisper process exits on its own, the window keeps showing "Listening".
-- Closing the window while recording does not stop the whisper process.
-- A download cannot be cancelled from the UI.
-- Selecting a model that is not installed while recording disables **Stop Recording**.
-- A model whose file was deleted outside the app still shows as installed.
-- A failed export (for example a protected Documents folder) is not handled.
-- The transcript area does not scroll.
-<!-- known-issues:end -->
+- The model list does not show which models are already installed.
+- Recording stops by itself after 30 minutes, because captured audio is held in memory.
+- The transcript is rebuilt in full for every new line, which slows down in very long sessions.
+- Not yet checked by hand with a real microphone and a real whisper.cpp binary: the audio-device stop sequence, UTF-8 decoding of whisper output, and transcript scrolling. These are covered by automated tests that use stand-ins.
+
+Fixed in that round and no longer issues: transcript updates arriving off the UI thread, the window staying on "Listening" after whisper exits, the whisper process surviving a closed window, downloads that could not be cancelled, **Stop Recording** being disabled by selecting an uninstalled model, deleted model files still showing as installed, unhandled export failures, and the transcript area not scrolling.
 
 ## Contributing
 
