@@ -5,34 +5,50 @@
 <p align="center"><strong>Offline voice dictation for Windows with local Whisper models.</strong></p>
 
 <p align="center">
+  <a href="https://github.com/muhib-karim/VoiceDicatationCodex/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/muhib-karim/VoiceDicatationCodex/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/muhib-karim/VoiceDicatationCodex"></a>
   <img alt="Top language" src="https://img.shields.io/github/languages/top/muhib-karim/VoiceDicatationCodex">
-  <a href="https://github.com/muhib-karim/VoiceDicatationCodex/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/muhib-karim/VoiceDicatationCodex/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt=".NET 8" src="https://img.shields.io/badge/.NET-8.0-512BD4">
+  <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D6">
+  <img alt="Status: prototype" src="https://img.shields.io/badge/status-prototype-orange">
 </p>
 
 ---
 
 VoiceDictationCodex is a Windows desktop app (C#, .NET 8, WPF, MVVM) for speech-to-text that runs **entirely on your machine**. It manages local [whisper.cpp](https://github.com/ggerganov/whisper.cpp) GGML models, captures microphone audio with [NAudio](https://github.com/naudio/NAudio), and drives a local Whisper process. Nothing is sent to a cloud speech API, so there is **no API key to configure**.
 
-> **Project status: early prototype.** The UI, model management, persistence and process orchestration are implemented. End-to-end live dictation is **not finished yet**: captured audio is not currently streamed into the Whisper process, and *Import Audio* is a placeholder. See [Roadmap / limitations](#roadmap--limitations).
+## Project status: prototype
+
+End-to-end live dictation is **not finished**. Captured audio is not yet passed to the Whisper process, so pressing **Start Recording** does not produce a transcript of what you say.
+
+| Area | State |
+|---|---|
+| Model catalog, download, SHA-256 verification, local registry | Works |
+| Starting, monitoring and stopping an external whisper.cpp process | Works |
+| Reading the process output into the transcript view | Works |
+| Microphone capture (16 kHz mono PCM) | Works, but the audio is not consumed yet |
+| Feeding captured audio to Whisper (live dictation) | Not implemented |
+| Import Audio | Placeholder dialog |
+| Session duration | Shown, not updated |
+
+See [Roadmap and limitations](#roadmap-and-limitations).
 
 ## Key features
 
-- **Built-in model catalog.** Three whisper.cpp GGML models: `ggml-base.en`, `ggml-small` and `ggml-medium`.
-- **Model downloads with progress.** Models stream from the public `ggerganov/whisper.cpp` files on Hugging Face into `Documents\VoiceDictationCodex\Models`, with the percentage shown in the status chip.
-- **Local model registry.** Metadata for installed models is saved as JSON in `%APPDATA%\VoiceDictationCodex\models.json` and merged with the catalog at startup.
+- **Built-in model catalog.** Three whisper.cpp GGML models: `ggml-base.en`, `ggml-small` and `ggml-medium`, each with its exact size and SHA-256.
+- **Verified model downloads.** A model streams from the public `ggerganov/whisper.cpp` files on Hugging Face (pinned to one revision) into a `.partial` file. It is moved into place only after its size and SHA-256 match. A failed, stalled or corrupted download leaves nothing behind.
+- **Local model registry.** Metadata for installed models is saved as JSON and merged with the catalog at startup. Saves are atomic, and an unreadable file is set aside as `models.json.corrupt` instead of breaking the model list.
 - **Microphone capture.** 16 kHz mono PCM via NAudio `WaveInEvent`.
-- **Whisper runtime orchestration.** Launches an external whisper.cpp executable with the selected model and reads its stdout. JSON lines (`{"text": ...}`) and plain-text output are both accumulated into the live transcript.
-- **Session dashboard.** Shows the live transcript, word count, language and model, plus *New Session* and *Export Text* (writes a timestamped `.txt` to `Documents\VoiceDictationCodex`).
-- **Dark, custom-styled WPF theme.** Includes rounded buttons and status chips.
-- **Graceful failures.** A missing microphone, a missing whisper executable, or a failed download updates the status text instead of crashing the app.
+- **Whisper runtime orchestration.** Launches an external whisper.cpp executable with the selected model, reads stdout and stderr as UTF-8, and reports the exit code and the last stderr lines when the process ends. JSON lines (`{"text": ...}`) and plain-text output are both accumulated into the transcript.
+- **Session dashboard.** Shows the transcript, word count, language and model, plus *New Session* and *Export Text* (writes a timestamped `.txt`).
+- **Dark, custom-styled WPF theme.**
 
 ## Quick start
 
 **Prerequisites**
 
 - Windows 10/11
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (`global.json` pins the 8.0 band)
 - A whisper.cpp command-line binary, if you want to try the runtime integration (see [Configuration](#configuration))
 
 ```powershell
@@ -45,22 +61,44 @@ dotnet run --project src/VoiceDictationCodex.App/VoiceDictationCodex.App.csproj
 
 ## Usage
 
-1. Pick a model under **Model Library** and click **Download Selected**. The status chip shows download progress.
-2. Once the model is installed, click **Start Recording**. This starts microphone capture and the whisper.cpp process. Click **Stop Recording** to end the session.
+1. Pick a model under **Model Library** and click **Download Selected**. The status chip shows download progress, and the model is verified before it is marked installed.
+2. Once the model is installed, click **Start Recording**. This starts microphone capture and the whisper.cpp process. Click **Stop Recording** to end the session. Until the live pipeline exists, the transcript shows only what the whisper process itself prints.
 3. Use **New Session** to clear the transcript and **Export Text** to save it as a `.txt` file.
 
 ## Configuration
 
 | Setting | How to set it | Default |
 |---|---|---|
-| whisper.cpp executable | Environment variable `VOICEDICTATION_WHISPER_PATH` (full path to the binary) | `whisper.cpp.exe`, looked up via the working directory / `PATH` |
-| Model download URL | `ModelDownloadService.GetDownloadUrl` | `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/<id>.bin` |
+| whisper.cpp executable | Environment variable `VOICEDICTATION_WHISPER_PATH` (full path to the binary) | `whisper-cli.exe`, looked up via the working directory / `PATH` |
+| Model download URL | `ModelDownloadService.GetDownloadUrl` and `ModelDownloadService.ModelRevision` | `https://huggingface.co/ggerganov/whisper.cpp/resolve/<revision>/<id>.bin` |
 
 ```powershell
 $env:VOICEDICTATION_WHISPER_PATH = "C:\tools\whisper.cpp\whisper-cli.exe"
 ```
 
 No secrets or API keys are used anywhere in the app.
+
+## Where data is stored
+
+| Data | Location |
+|---|---|
+| Downloaded models | `%LOCALAPPDATA%\VoiceDictationCodex\Models` |
+| Model registry | `%APPDATA%\VoiceDictationCodex\models.json` |
+| Exported transcripts | `Documents\VoiceDictationCodex` |
+
+Models are kept out of `Documents` so that a synced Documents folder does not upload files of up to 1.5 GB. Models downloaded by an earlier version stay where they are and keep working, because the registry stores their full path.
+
+Captured audio is held in memory only. The app never writes an audio file.
+
+## Model integrity
+
+| Model | Size (bytes) | SHA-256 |
+|---|---|---|
+| `ggml-base.en` | 147,964,211 | `a03779c86df3323075f5e796cb2ce5029f00ec8869eee3fdfb897afe36c6d002` |
+| `ggml-small` | 487,601,967 | `1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b` |
+| `ggml-medium` | 1,533,763,059 | `6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208` |
+
+These values are compiled into `ModelCatalogService` and checked after every download. To add a model, add its id, size and SHA-256 there.
 
 ## Architecture
 
@@ -73,30 +111,36 @@ flowchart LR
     end
     MW -- bindings / commands --> VM["MainViewModel"]
 
-    VM --> CAT["ModelCatalogService<br/>(built-in catalog)"]
-    VM --> DL["ModelDownloadService"]
+    VM --> CAT["ModelCatalogService<br/>(catalog, sizes, SHA-256)"]
+    VM --> DL["ModelDownloadService<br/>(IModelDownloader)"]
     VM --> REPO["JsonModelRepository<br/>(IModelRepository)"]
     VM --> AUD["AudioCaptureService<br/>(NAudio, 16 kHz mono)"]
     VM --> TS["TranscriptionService"]
 
-    DL -- HTTPS --> HF[("Hugging Face<br/>GGML models")]
+    DL -- HTTPS, verified --> HF[("Hugging Face<br/>GGML models")]
     DL -- save metadata --> REPO
     REPO -- models.json --> FS[("%APPDATA%")]
-    TS --> RT["WhisperRuntime"]
+    TS --> RT["WhisperRuntime<br/>(IWhisperRuntime)"]
     RT -- stdout lines --> TS
-    RT -- starts --> EXE["whisper.cpp process"]
+    RT -- starts, monitors, stops --> EXE["whisper.cpp process"]
     TS -- TextUpdated --> VM
 ```
 
-## Testing
+## Testing and CI
 
-The test suite is an xUnit project under `tests/` with 18 test cases. It covers the pure logic: the model catalog, JSON model repository round-trips (run against a temporary directory), transcript line parsing, word counting, and whisper runtime argument/executable resolution.
+The xUnit project under `tests/` covers the model catalog, verified downloads (success, hash mismatch, truncation, mid-stream failure, cancellation, stall and HTTP error), the JSON registry (round trips, corrupt files, concurrent saves), transcript line parsing, word counting, and the whisper process lifecycle. Process tests launch a small stand-in child process, so they need neither a whisper binary nor a microphone. No test touches the network.
 
 ```powershell
 dotnet test VoiceDictationCodex.sln --configuration Release
 ```
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs restore, build and test on `windows-latest` with .NET 8 for every push to `main` and every pull request.
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push to `main` and every pull request:
+
+- **Build and test** on `windows-latest`: warnings are errors, tests run with coverage, and the coverage figure is written to the job summary.
+- **Format and dependency audit**: `dotnet format --verify-no-changes` and a check for known-vulnerable NuGet packages.
+- **Secret scan**: gitleaks over the full history.
+
+Actions are pinned by commit SHA, and Dependabot proposes NuGet and action updates weekly.
 
 ## Project structure
 
@@ -113,16 +157,31 @@ tests/VoiceDictationCodex.Tests/   # xUnit tests
 docs/                      # Architecture notes and banner
 ```
 
-## Roadmap / limitations
+## Roadmap and limitations
 
-- **Live pipeline:** `AudioCaptureService` already raises audio chunks, but they are not yet passed into the Whisper runtime. The current `--model ... --output-json` arguments are placeholders and need to be matched to the chosen whisper.cpp binary, or replaced with an in-process runtime such as Whisper.NET.
+- **Live pipeline:** `AudioCaptureService` records audio, but it is not yet passed into the Whisper runtime. The current `--model ... --output-json` arguments are placeholders and need to be matched to the chosen whisper.cpp binary, or replaced with an in-process runtime such as Whisper.NET. With a stock `whisper-cli.exe` the process exits straight away and the app reports its exit code.
 - **Import Audio:** currently shows a placeholder dialog.
 - **Session duration:** shown in the UI but not yet updated while recording.
 - Planned: waveform visualization, a settings view (hotkeys, formatting, punctuation), and MSIX/WinGet packaging with optional pre-bundled models.
 
+<!-- known-issues:start -->
+## Known issues
+
+These are understood and not yet fixed:
+
+- Transcript updates are raised from a background thread, which can stop a session at the first transcript line.
+- When the whisper process exits on its own, the window keeps showing "Listening".
+- Closing the window while recording does not stop the whisper process.
+- A download cannot be cancelled from the UI.
+- Selecting a model that is not installed while recording disables **Stop Recording**.
+- A model whose file was deleted outside the app still shows as installed.
+- A failed export (for example a protected Documents folder) is not handled.
+- The transcript area does not scroll.
+<!-- known-issues:end -->
+
 ## Contributing
 
-Issues and pull requests are welcome. Please keep each pull request focused and say how you tested it.
+Issues and pull requests are welcome. Please keep each pull request focused and say how you tested it. Never commit model files (`*.bin`, `*.gguf`) or audio recordings; `.gitignore` excludes them.
 
 ## License
 
